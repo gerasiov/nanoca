@@ -1,0 +1,70 @@
+#!/bin/sh
+
+BASE="/home/ca/openssl"
+CONFIG="${BASE}/openssl.cnf"
+CA_DAYS=3653
+CA_KEY="rsa:4096"
+CERT_DAYS=1096
+CERT_KEY="rsa:2048"
+
+create-cert(){
+	NAME="$1"
+	CSR="${BASE}/req/${NAME}.csr"
+	KEY="${BASE}/private/${NAME}.pem"
+
+	if [ -e "$CSR" ];then
+		echo "Aborted: certificate already exists."
+		exit 1
+	fi
+
+	openssl req -config "$CONFIG" -new -newkey $CERT_KEY -keyout "$KEY" -out "$CSR" -nodes&&\
+	echo "Done."||
+	echo "Failed."
+}
+
+sign-cert(){
+	NAME="$1"
+
+	CSR="${BASE}/req/${NAME}.csr"
+	CERT="${BASE}/certs/${NAME}.pem"
+
+	if [ ! -f "$CSR" ];then
+		echo "Aborted: certificate not found."
+		exit 1
+	fi
+
+	#  sign the certificate
+	echo "CA signing: $CSR -> $CERT"
+	openssl ca -config "$CONFIG" -out "$CERT" -infiles "$CSR" ||{ echo "Error occured."; exit 1; }
+
+	echo "CA verifying: $CERT <-> CA cert"
+	openssl verify -CAfile "${BASE}/cacert.pem" "$CERT"
+}
+
+create-config(){
+}
+
+db-init(){
+	if [ -e "$BASE" ];then
+		echo "Aborted: directory allready exists."
+		exit 1
+	fi
+
+	mkdir -p "$BASE"
+	mkdir "${BASE}/req" "${BASE}/certs" "${BASE}/newcerts" "${BASE}/private"
+	chmod 700 "${BASE}/private"
+
+	touch "${BASE}/index.txt" "${BASE}/index.txt.attr"
+	echo "00" > "${BASE}/serial"
+
+	create-config
+}
+
+create-ca(){
+	openssl req -new -newkey $CA_KEY -x509 -extensions v3_ca -keyout "${BASE}private/cakey.pem" -out "${BASE}/cacert.pem" -days 3653 -config "${BASE}/openssl.cnf"
+}
+
+show-text(){
+	openssl x509 -in cacert.pem -text
+}
+
