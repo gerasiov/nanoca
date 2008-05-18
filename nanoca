@@ -67,8 +67,6 @@ db_init(){
 
 	touch "${BASE}/index.txt" "${BASE}/index.txt.attr"
 	echo "00" > "${BASE}/serial"
-
-	create_config
 }
 
 # Create certificate authority
@@ -81,3 +79,40 @@ show_text(){
 	openssl x509 -in "${BASE}/$1" -text
 }
 
+
+parse_opt(){
+if false;then
+	local TEMP=$(getopt -o ab: --long longa,longb: -n nanoca -- "$@")
+	eval set -- "$TEMP"
+	while true; do
+		case "$1" in
+			-a|--longa) A=TRUE; shift ;;
+			-b|--longb) B="$2"; shift 2 ;;
+			--) shift ; break ;;
+			*) echo "Parse error!" ; exit 1 ;;
+		esac
+	done
+fi
+
+	if [ $# -eq 0 -o $# -gt 2 ];then
+		echo "Parse error!" ; exit 1 ;
+	fi
+
+	COMMAND="$1"
+	PARAMETER="$2"
+}
+
+
+parse_opt $@
+
+case "$COMMAND" in
+	init)		BASE="$PARAMETER"
+			echo  -e '\nBASE="'$PARAMETER'"' >> ${HOME}/.nanoca
+			db_init
+			create_config
+			create_ca ;;
+	create-ca)	create_ca ;;
+	create)		create_cert "$PARAMETER";;
+	sign)		sign_cert "$PARAMETER";;
+	*)		echo "Parse error" ;;
+esac
