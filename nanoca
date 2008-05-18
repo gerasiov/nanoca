@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# Basic configs
 BASE="/home/ca/openssl"
 CONFIG="${BASE}/openssl.cnf"
 CA_DAYS=3653
@@ -7,6 +8,12 @@ CA_KEY="rsa:4096"
 CERT_DAYS=1096
 CERT_KEY="rsa:2048"
 
+# Read user's config
+if [ -f "${HOME}/.nanoca" ];then
+	. "${HOME}/.nanoca"
+fi
+
+# Create certificate request.
 create-cert(){
 	NAME="$1"
 	CSR="${BASE}/req/${NAME}.csr"
@@ -22,6 +29,7 @@ create-cert(){
 	echo "Failed."
 }
 
+# Sign certificate request
 sign-cert(){
 	NAME="$1"
 
@@ -41,9 +49,11 @@ sign-cert(){
 	openssl verify -CAfile "${BASE}/cacert.pem" "$CERT"
 }
 
+# Generate openssl config
 create-config(){
 }
 
+# Initialize openssl infrastructure
 db-init(){
 	if [ -e "$BASE" ];then
 		echo "Aborted: directory allready exists."
@@ -60,11 +70,13 @@ db-init(){
 	create-config
 }
 
+# Create certificate authority
 create-ca(){
 	openssl req -new -newkey $CA_KEY -x509 -extensions v3_ca -keyout "${BASE}private/cakey.pem" -out "${BASE}/cacert.pem" -days 3653 -config "${BASE}/openssl.cnf"
 }
 
+# Print certificate in plain text
 show-text(){
-	openssl x509 -in cacert.pem -text
+	openssl x509 -in "${BASE}/$1" -text
 }
 
