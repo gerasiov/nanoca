@@ -14,7 +14,7 @@ if [ -f "${HOME}/.nanoca" ];then
 fi
 
 # Create certificate request.
-create-cert(){
+create_cert(){
 	NAME="$1"
 	CSR="${BASE}/req/${NAME}.csr"
 	KEY="${BASE}/private/${NAME}.pem"
@@ -25,12 +25,12 @@ create-cert(){
 	fi
 
 	openssl req -config "$CONFIG" -new -newkey $CERT_KEY -keyout "$KEY" -out "$CSR" -nodes&&\
-	echo "Done."||
+	echo "Done."||\
 	echo "Failed."
 }
 
 # Sign certificate request
-sign-cert(){
+sign_cert(){
 	NAME="$1"
 
 	CSR="${BASE}/req/${NAME}.csr"
@@ -50,11 +50,12 @@ sign-cert(){
 }
 
 # Generate openssl config
-create-config(){
+create_config(){
+	echo "TODO"
 }
 
 # Initialize openssl infrastructure
-db-init(){
+db_init(){
 	if [ -e "$BASE" ];then
 		echo "Aborted: directory allready exists."
 		exit 1
@@ -67,16 +68,16 @@ db-init(){
 	touch "${BASE}/index.txt" "${BASE}/index.txt.attr"
 	echo "00" > "${BASE}/serial"
 
-	create-config
+	create_config
 }
 
 # Create certificate authority
-create-ca(){
+create_ca(){
 	openssl req -new -newkey $CA_KEY -x509 -extensions v3_ca -keyout "${BASE}private/cakey.pem" -out "${BASE}/cacert.pem" -days 3653 -config "${BASE}/openssl.cnf"
 }
 
 # Print certificate in plain text
-show-text(){
+show_text(){
 	openssl x509 -in "${BASE}/$1" -text
 }
 
