@@ -22,8 +22,14 @@
 set -e
 
 # Basic configs
-BASE="/home/ca/openssl"
-CONFIG="${BASE}/openssl.cnf"
+BASE=""
+COUNTRY="RU"
+PROVINCE=""
+CITY="Moscow"
+ORGANIZATION=""
+
+
+#TODO move this defines to config?
 CA_DAYS=3653
 CA_KEY="rsa:4096"
 CERT_DAYS=1096
@@ -34,7 +40,11 @@ if [ -f "${HOME}/.nanoca" ];then
 	. "${HOME}/.nanoca"
 fi
 
+export BASE COUNTRY PROVINCE CITY ORGANIZATION
+
 COMMAND_NAME="nanoca"
+#TODO put here location of global nanoca's openssl config
+CONFIG="./openssl.cnf"
 
 # Create certificate request.
 create_cert(){
@@ -72,9 +82,11 @@ sign_cert(){
 	openssl verify -CAfile "${BASE}/cacert.pem" "$CERT"
 }
 
-# Generate openssl config
+# Generate nanoca config
 create_config(){
-	echo "TODO"
+	echo  -e '\nBASE="'$(cd "$PARAMETER"&&pwd)'"' > ${HOME}/.nanoca
+	echo "TODO: Parse the following line and push it into nanoca config."
+	openssl x509 -subject -in ${BASE}/cacert.pem -noout
 }
 
 # Initialize openssl infrastructure
@@ -94,7 +106,7 @@ db_init(){
 
 # Create certificate authority
 create_ca(){
-	openssl req -new -newkey $CA_KEY -x509 -extensions v3_ca -keyout "${BASE}private/cakey.pem" -out "${BASE}/cacert.pem" -days 3653 -config "${BASE}/openssl.cnf"
+	openssl req -new -newkey $CA_KEY -x509 -extensions v3_ca -keyout "${BASE}/private/cakey.pem" -out "${BASE}/cacert.pem" -days $CA_DAYS -config "$CONFIG"
 }
 
 # Print certificate in plain text
@@ -112,6 +124,7 @@ usage(){
 }
 
 parse_opt(){
+#it's commented out for now, may be we will use getopt later
 if false;then
 	local TEMP=$(getopt -o ab: --long longa,longb: -n "$COMMAND_NAME" -- "$@")
 	eval set -- "$TEMP"
@@ -138,10 +151,9 @@ parse_opt $@
 
 case "$COMMAND" in
 	init)		BASE="$PARAMETER"
-			echo  -e '\nBASE="'$PARAMETER'"' >> ${HOME}/.nanoca
 			db_init
-			create_config
-			create_ca ;;
+			create_ca
+			create_config ;;
 	create-ca)	create_ca ;;
 	create)		create_cert "$PARAMETER";;
 	sign)		sign_cert "$PARAMETER";;
