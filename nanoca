@@ -34,6 +34,8 @@ CA_DAYS=3653
 CA_KEY="rsa:4096"
 CERT_DAYS=1096
 CERT_KEY="rsa:2048"
+CERT_TYPE="server"
+CONFIG_DIR="."
 
 # Read user's config
 if [ -f "${HOME}/.nanoca" ];then
@@ -43,11 +45,11 @@ fi
 export BASE COUNTRY PROVINCE CITY ORGANIZATION
 
 COMMAND_NAME="nanoca"
-#TODO put here location of global nanoca's openssl config
-CONFIG="./openssl.cnf"
+
+CONFIG="${CONFIG_DIR}/openssl.cnf"
 
 # Create certificate request.
-create_cert(){
+create_req(){
 	NAME="$1"
 	CSR="${BASE}/req/${NAME}.csr"
 	KEY="${BASE}/private/${NAME}.pem"
@@ -76,7 +78,8 @@ sign_cert(){
 
 	#  sign the certificate
 	echo "CA signing: $CSR -> $CERT"
-	openssl ca -config "$CONFIG" -out "$CERT" -infiles "$CSR" ||{ echo "Error occured."; exit 1; }
+
+	openssl ca -config "$CONFIG" -extensions "$CERT_TYPE" -out "$CERT" -infiles "$CSR" ||{ echo "Error occured."; exit 1; }
 
 	echo "CA verifying: $CERT <-> CA cert"
 	openssl verify -CAfile "${BASE}/cacert.pem" "$CERT"
@@ -118,25 +121,22 @@ usage(){
 	echo "$COMMAND_NAME operation [parameter]" >&2
 	echo "Operations could be:"
 	echo "init <path>"
-	echo "create <cert-name>"
-	echo "sign <cert-name>"
+	echo "create [--type <type>] <cert-name>"
+	echo "request <cert-name>"
+	echo "sign [--type <type>] <cert-name>"
 	echo "help"
 }
 
 parse_opt(){
-#it's commented out for now, may be we will use getopt later
-if false;then
-	local TEMP=$(getopt -o ab: --long longa,longb: -n "$COMMAND_NAME" -- "$@")
+	local TEMP=$(getopt -o t: --long type: -n "$COMMAND_NAME" -- "$@")
 	eval set -- "$TEMP"
 	while true; do
 		case "$1" in
-			-a|--longa) A=TRUE; shift ;;
-			-b|--longb) B="$2"; shift 2 ;;
+			-t|--type) CERT_TYPE="$2"; shift 2 ;;
 			--) shift ; break ;;
 			*) echo "Parse error!" ; exit 1 ;;
 		esac
 	done
-fi
 
 	if [ $# -eq 0 -o $# -gt 2 ];then
 		echo "Parse error!" ; usage; exit 1 ;
@@ -155,7 +155,8 @@ case "$COMMAND" in
 			create_ca
 			create_config ;;
 	create-ca)	create_ca ;;
-	create)		create_cert "$PARAMETER";;
+	create)		create_req "$PARAMETER"&&sign_cert "$PARAMETER";;
+	request)	create_req "$PARAMETER";;
 	sign)		sign_cert "$PARAMETER";;
 	help)		usage ;;
 	*)		echo "Parse error!"; usage; exit 1 ;;
