@@ -35,7 +35,7 @@ CA_KEY="rsa:4096"
 CERT_DAYS=1096
 CERT_KEY="rsa:2048"
 CERT_TYPE="server"
-CONFIG_DIR="."
+CONFIG_DIR="config"
 
 # Read user's config
 if [ -f "${HOME}/.nanoca" ];then
@@ -62,6 +62,7 @@ create_req(){
 	openssl req -config "$CONFIG" -new -newkey $CERT_KEY -keyout "$KEY" -out "$CSR" -nodes&&\
 	echo "Done."||\
 	echo "Failed."
+	echo "$CERT_TYPE" > "${BASE}/req/${NAME}.type"
 }
 
 # Sign certificate request
@@ -76,10 +77,15 @@ sign_cert(){
 		exit 1
 	fi
 
+# todo: allow user to override this crap when signing?
+	if [ -f "${BASE}/req/${NAME}.type" ];then
+		CERT_TYPE="$(cat "${BASE}/req/${NAME}.type")"
+	fi
+
 	#  sign the certificate
 	echo "CA signing: $CSR -> $CERT"
 
-	openssl ca -config "$CONFIG" -extensions "$CERT_TYPE" -out "$CERT" -infiles "$CSR" ||{ echo "Error occured."; exit 1; }
+	openssl ca -config "$CONFIG" -extensions "$CERT_TYPE" -extfile "${CONFIG_DIR}/${CERT_TYPE}.cnf" -out "$CERT" -infiles "$CSR" ||{ echo "Error occured."; exit 1; }
 
 	echo "CA verifying: $CERT <-> CA cert"
 	openssl verify -CAfile "${BASE}/cacert.pem" "$CERT"
@@ -132,9 +138,9 @@ parse_opt(){
 	eval set -- "$TEMP"
 	while true; do
 		case "$1" in
-			-t|--type) CERT_TYPE="$2"; shift 2 ;;
-			--) shift ; break ;;
-			*) echo "Parse error!" ; exit 1 ;;
+			-t|--type)	CERT_TYPE="$2"; shift 2 ;;
+			--) 		shift ; break ;;
+			*) 		echo "Parse error!" ; exit 1 ;;
 		esac
 	done
 
