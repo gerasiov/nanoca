@@ -48,7 +48,7 @@ crl		= $dir/crl.pem 		# The current CRL
 private_key	= $dir/private/cakey.pem# The private key
 RANDFILE	= $dir/private/.rand	# private random number file
 
-x509_extensions	= server		# The extentions to add to the cert
+x509_extensions	= extension		# The extentions to add to the cert (fake one, scripts use others)
 
 # Comment out the following two lines for the "traditional"
 # (and highly broken) format.
@@ -209,31 +209,6 @@ basicConstraints = CA:true
 # issuerAltName=issuer:copy
 authorityKeyIdentifier=keyid:always,issuer:always
 
-[ server ]
-basicConstraints=CA:FALSE
-nsCertType                      = server
-nsComment                       = "nanoCA generated certificate"
-subjectKeyIdentifier=hash
-authorityKeyIdentifier=keyid,issuer:always
-extendedKeyUsage=serverAuth
-keyUsage = digitalSignature, keyEncipherment
-#nsCaRevocationUrl		= http://www.domain.dom/ca-crl.pem
-#nsBaseUrl
-#nsRevocationUrl
-#nsRenewalUrl
-#nsCaPolicyUrl
-#nsSslServerName
-
-
-[ client ]
-basicConstraints=CA:FALSE
-# For normal client use this is typical
-nsCertType = client
-nsComment			= "nanoCA generated certificate"
-
-subjectKeyIdentifier=hash
-authorityKeyIdentifier=keyid,issuer:always
-extendedKeyUsage=clientAuth
-keyUsage = digitalSignature
-
+# fake extension
+[ extension ]
 

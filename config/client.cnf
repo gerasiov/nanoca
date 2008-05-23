@@ -1,0 +1,13 @@
+#client extension
+
+[ client ]
+basicConstraints=CA:FALSE
+# For normal client use this is typical
+nsCertType = client
+nsComment			= "nanoCA generated certificate"
+
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid,issuer:always
+extendedKeyUsage=clientAuth
+keyUsage = digitalSignature
+
