@@ -73,7 +73,7 @@ sign_cert(){
 	CERT="${BASE}/certs/${NAME}.pem"
 
 	if [ ! -f "$CSR" ];then
-		echo "Aborted: certificate not found."
+		echo "Aborted: certificate request not found."
 		exit 1
 	fi
 
@@ -94,7 +94,7 @@ sign_cert(){
 # Generate nanoca config
 create_config(){
 	echo  -e '\nBASE="'$(cd "$PARAMETER"&&pwd)'"' > ${HOME}/.nanoca
-	echo "TODO: Parse the following line and push it into nanoca config."
+	echo "TODO: Parse the following line and push this into nanoca config."
 	openssl x509 -subject -in ${BASE}/cacert.pem -noout
 }
 
@@ -118,9 +118,55 @@ create_ca(){
 	openssl req -new -newkey $CA_KEY -x509 -extensions v3_ca -keyout "${BASE}/private/cakey.pem" -out "${BASE}/cacert.pem" -days $CA_DAYS -config "$CONFIG"
 }
 
+#FIXME: add --brief support, and make list_ to use show_
+
 # Print certificate in plain text
-show_text(){
-	openssl x509 -in "${BASE}/$1" -text
+show_cert(){
+	openssl x509 -in "${BASE}/certs/$1" -text
+}
+
+show_req(){
+	openssl req -in "${BASE}/req/$1" -text
+}
+
+list_certs(){
+	for FILE in "${BASE}/certs/"*.pem; do
+		test -f "$FILE"||break
+		test -s "$FILE"||continue
+
+		NAME="${FILE#${BASE}/certs/}"
+		NAME="${NAME%.pem}"
+		SUBJECT="$(openssl x509 -in "$FILE" -subject -noout)"
+#FIXME: type may differ from one, specified in request :( or not?
+		TYPE="$(cat "${BASE}/req/${NAME}.type")"
+
+		echo -e "\t$NAME\t$TYPE\t${SUBJECT#subject=}"
+	done	
+}
+
+list_reqs(){
+	for FILE in "${BASE}/req/"*.csr; do
+		test -f "$FILE"||break
+		test -s "$FILE"||continue
+
+		NAME="${FILE#${BASE}/req/}"
+		NAME="${NAME%.csr}"
+		SUBJECT="$(openssl req -in "$FILE" -subject -noout)"
+		TYPE="$(cat "${BASE}/req/${NAME}.type")"
+
+		echo -e "\t$NAME\t$TYPE\t${SUBJECT#subject=}"
+	done
+}
+
+#Remove request
+rm_req(){
+	echo "I'm not implemented yet."
+	#Do some checks..
+}
+
+search(){
+	 list_reqs | grep --label=req --null --with-filename --extended-regexp -- "$PARAMETER"
+	 list_certs | grep --label=cert --null --with-filename --extended-regexp -- "$PARAMETER"
 }
 
 usage(){
@@ -130,11 +176,16 @@ usage(){
 	echo "create [--type <type>] <cert-name>"
 	echo "request <cert-name>"
 	echo "sign [--type <type>] <cert-name>"
+	echo "show-cert [--brief] <name>"
+	echo "show-req [--brief] <name>"
+	echo "list-certs [--type <type>]"
+	echo "list-reqs [--type <type>]"
+	echo "search [--type <type>] <pattern>"
 	echo "help"
 }
 
 parse_opt(){
-	local TEMP=$(getopt -o t: --long type: -n "$COMMAND_NAME" -- "$@")
+	local TEMP="$(getopt -o t: --long type: -n "$COMMAND_NAME" -- "$@")"
 	eval set -- "$TEMP"
 	while true; do
 		case "$1" in
@@ -153,7 +204,7 @@ parse_opt(){
 }
 
 
-parse_opt $@
+parse_opt "$@"
 
 case "$COMMAND" in
 	init)		BASE="$PARAMETER"
@@ -164,6 +215,13 @@ case "$COMMAND" in
 	create)		create_req "$PARAMETER"&&sign_cert "$PARAMETER";;
 	request)	create_req "$PARAMETER";;
 	sign)		sign_cert "$PARAMETER";;
+	show-cert)	show_cert "$PARAMETER";;
+	show-req)	show_req "$PARAMETER";;
+	list-certs)	list_certs;;
+	list-reqs)	list_reqs;;
+	rm-req)		rm-req "$PARAMETER";;
+	search)		search "$PARAMETER";;
 	help)		usage ;;
 	*)		echo "Parse error!"; usage; exit 1 ;;
 esac
+
