@@ -1,0 +1,19 @@
+Source: nanoca
+Section: admin
+Priority: optional
+Maintainer: Alexander GQ Gerasiov <gq@cs.msu.su>
+Build-Depends: cdbs, debhelper (>= 5)
+Standards-Version: 3.7.2
+
+Package: nanoca
+Architecture: all
+Depends: openssl (>= 0.9.7)
+Description: simple certificate authority tool
+ nanoCA is a small tool with command line interface intended to manage a simple
+ certificate authority easy. It works as a wrapper around OpenSSL. But using
+ nanoCA is much simplier, than using OpenSSL itself.
+ You can create certificate requests in dialog or batch mode and generate
+ signed certificates. You could select one of predefined certificate types
+ (server, client, mail etc.) or specify your own one.
+ It was developed as a light-weight and configurable replacement for TinyCA
+ or Easy-RSA.
