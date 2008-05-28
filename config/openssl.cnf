@@ -138,12 +138,14 @@ localityName_default		= $ENV::CITY
 #1.organizationName_default	= World Wide Web Pty Ltd
 
 organizationalUnitName		= Organizational Unit Name (description of service)
-#organizationalUnitName_default	=
+organizationalUnitName_default	= $ENV::UNIT
 
-commonName			= Common Name (e.g. hostname)
+commonName			= Common Name (e.g. hostname or username)
+commonName_default		= $ENV::CNAME
 commonName_max			= 64
 
 emailAddress			= Email Address
+emailAddress_default		= $ENV::EMAIL
 emailAddress_max		= 64
 
 # SET-ex3			= SET extension number 3

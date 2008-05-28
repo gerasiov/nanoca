@@ -26,23 +26,26 @@ BASE=""
 COUNTRY="RU"
 PROVINCE=""
 CITY="Moscow"
-ORGANIZATION=""
+ORGANIZATION="MMM corp."
+UNIT=""
+CNAME=""
+EMAIL=""
 
-
-#TODO move this defines to config?
 CA_DAYS=3653
 CA_KEY="rsa:4096"
 CERT_DAYS=1096
 CERT_KEY="rsa:2048"
 CERT_TYPE="server"
 CONFIG_DIR="config"
+BATCH=""
+FILTER_TYPE=""
 
 # Read user's config
 if [ -f "${HOME}/.nanoca" ];then
 	. "${HOME}/.nanoca"
 fi
 
-export BASE COUNTRY PROVINCE CITY ORGANIZATION
+export BASE COUNTRY PROVINCE CITY ORGANIZATION UNIT CNAME EMAIL
 
 COMMAND_NAME="nanoca"
 
@@ -51,17 +54,23 @@ CONFIG="${CONFIG_DIR}/openssl.cnf"
 # Create certificate request.
 create_req(){
 	NAME="$1"
+	test -n "$CNAME"||CNAME="$NAME"
 	CSR="${BASE}/req/${NAME}.csr"
 	KEY="${BASE}/private/${NAME}.pem"
+
+	if [ -z "$NAME" ];then
+		echo "Aborted: empty name specified."
+		exit 1
+	fi
 
 	if [ -e "$CSR" ];then
 		echo "Aborted: certificate already exists."
 		exit 1
 	fi
 
-	openssl req -config "$CONFIG" -new -newkey $CERT_KEY -keyout "$KEY" -out "$CSR" -nodes&&\
+	openssl req -config "$CONFIG" -new -newkey "$CERT_KEY" -keyout "$KEY" -out "$CSR" -nodes $BATCH&&\
 	echo "Done."||\
-	echo "Failed."
+	{ echo "Failed."; exit 1; }
 	echo "$CERT_TYPE" > "${BASE}/req/${NAME}.type"
 }
 
@@ -71,6 +80,11 @@ sign_cert(){
 
 	CSR="${BASE}/req/${NAME}.csr"
 	CERT="${BASE}/certs/${NAME}.pem"
+
+	if [ -z "$NAME" ];then
+		echo "Aborted: empty name specified."
+		exit 1
+	fi
 
 	if [ ! -f "$CSR" ];then
 		echo "Aborted: certificate request not found."
@@ -85,7 +99,7 @@ sign_cert(){
 	#  sign the certificate
 	echo "CA signing: $CSR -> $CERT"
 
-	openssl ca -config "$CONFIG" -extensions "$CERT_TYPE" -extfile "${CONFIG_DIR}/${CERT_TYPE}.cnf" -out "$CERT" -infiles "$CSR" ||{ echo "Error occured."; exit 1; }
+	openssl ca -config "$CONFIG" $BATCH -extensions "$CERT_TYPE" -extfile "${CONFIG_DIR}/${CERT_TYPE}.cnf" -out "$CERT" -infiles "$CSR" ||{ echo "Error occured."; exit 1; }
 
 	echo "CA verifying: $CERT <-> CA cert"
 	openssl verify -CAfile "${BASE}/cacert.pem" "$CERT"
@@ -100,6 +114,11 @@ create_config(){
 
 # Initialize openssl infrastructure
 db_init(){
+	if [ -z "BASE" ];then
+		echo "Aborted: empty directory name specified."
+		exit 1
+	fi
+
 	if [ -e "$BASE" ];then
 		echo "Aborted: directory allready exists."
 		exit 1
@@ -122,11 +141,23 @@ create_ca(){
 
 # Print certificate in plain text
 show_cert(){
-	openssl x509 -in "${BASE}/certs/$1" -text
+	NAME="$1"
+	if [ ! -f "${BASE}/req/${NAME}.pem" ];then
+		echo "Aborted: no such certificate."
+		exit 1
+	fi
+
+	openssl x509 -in "${BASE}/certs/${NAME}.pem" -text
 }
 
 show_req(){
-	openssl req -in "${BASE}/req/$1" -text
+	NAME="$1"
+	if [ ! -f "${BASE}/req/${NAME}.crl" ];then
+		echo "Aborted: no such certificate request."
+		exit 1
+	fi
+
+	openssl req -in "${BASE}/req/${NAME}.crl" -text
 }
 
 list_certs(){
@@ -140,7 +171,8 @@ list_certs(){
 #FIXME: type may differ from one, specified in request :( or not?
 		TYPE="$(cat "${BASE}/req/${NAME}.type")"
 
-		echo -e "\t$NAME\t$TYPE\t${SUBJECT#subject=}"
+		test -z "$FILTER_TYPE" -o "$FILTER_TYPE" = "$TYPE"&&\
+		echo -e "\t$NAME\t$TYPE\t${SUBJECT#subject=}"||true
 	done	
 }
 
@@ -154,7 +186,8 @@ list_reqs(){
 		SUBJECT="$(openssl req -in "$FILE" -subject -noout)"
 		TYPE="$(cat "${BASE}/req/${NAME}.type")"
 
-		echo -e "\t$NAME\t$TYPE\t${SUBJECT#subject=}"
+		test -z "$FILTER_TYPE" -o "$FILTER_TYPE" = "$TYPE"&&\
+		echo -e "\t$NAME\t$TYPE\t${SUBJECT#subject=}"||true
 	done
 }
 
@@ -170,26 +203,43 @@ search(){
 }
 
 usage(){
-	echo "$COMMAND_NAME operation [parameter]" >&2
-	echo "Operations could be:"
-	echo "init <path>"
-	echo "create [--type <type>] <cert-name>"
-	echo "request <cert-name>"
-	echo "sign [--type <type>] <cert-name>"
-	echo "show-cert [--brief] <name>"
-	echo "show-req [--brief] <name>"
-	echo "list-certs [--type <type>]"
-	echo "list-reqs [--type <type>]"
-	echo "search [--type <type>] <pattern>"
-	echo "help"
+	echo >&2
+	echo "Usage:" >&2
+	echo "$COMMAND_NAME [options] operation [parameter]" >&2
+	echo >&2
+	echo "Operations could be:" >&2
+	echo "init <path>" >&2
+	echo "create [--type <type>] [--key <alg:length>] <cert-name>" >&2
+	echo "request [--type <type>] [--key <alg:length>] <cert-name>" >&2
+	echo "sign <cert-name>" >&2
+	echo "show-cert [--brief] <name>" >&2
+	echo "show-req [--brief] <name>" >&2
+	echo "list-certs [--type <type>]" >&2
+	echo "list-reqs [--type <type>]" >&2
+	echo "search [--type <type>] <pattern>" >&2
+	echo "help" >&2
 }
 
 parse_opt(){
-	local TEMP="$(getopt -o t: --long type: -n "$COMMAND_NAME" -- "$@")"
+	local TEMP="$(getopt -o t:k:d:C:P:T:O:U:E:N:c:B:s:b --long type:,key:,days:,country:,province:,city:,organization:,unit:,email:,cname:,batch,subject:,config:,base:,brief -n "$COMMAND_NAME" -- "$@")"
 	eval set -- "$TEMP"
 	while true; do
 		case "$1" in
-			-t|--type)	CERT_TYPE="$2"; shift 2 ;;
+			-t|--type)	CERT_TYPE="$2"; FILTER_TYPE="$2"; shift 2 ;;
+			-k|--key)	CERT_KEY="$2"; shift 2;;
+			-d|--days)	CERT_DAYS="$2"; shift 2;;
+			-C|--country)	COUNTRY="$2"; shift 2;;
+			-P|--province)	PROVINCE="$2"; shift 2;;
+			-T|--city)	CITY="$2"; shift 2;;
+			-O|--organization)
+					ORGANIZATION="$2"; shift 2;;
+			-U|--unit)	UNIT="$2"; shift 2;;
+			-E|--email)	EMAIL="$2"; shift 2;;
+			-N|--cname)	CNAME="$2"; shift 2;;
+			-i|--brief)	echo "FIXME: not supported yet"; shift;;
+			-b|--batch)	BATCH="-batch"; shift;;
+			-c|--config)	echo "FIXME: not supported yet"; shift 2;;
+			-B|--base)	echo "FIXME: not supported yet"; shift 2;;
 			--) 		shift ; break ;;
 			*) 		echo "Parse error!" ; exit 1 ;;
 		esac
@@ -203,8 +253,24 @@ parse_opt(){
 	PARAMETER="$2"
 }
 
+check_opt(){
+#basic checks
+
+#command-specific checks
+	case "$COMMAND" in
+		init)	
+			test -n "$PARAMETER" || { echo "Error: please provide directory to create as a parameter."; usage; exit 1; };;
+		create|request|sign|show-req|show-cert|rm-req)
+			test -n "$PARAMETER" || { echo "Error: please provide name as a parameter."; usage; exit 1; };;
+		search)
+			test -n "$PARAMETER" || { echo "Error: please provide search pattern as a parameter."; usage; exit 1; };;
+	esac
+	test "$COMMAND" != "init" -a "$COMMAND" != "help" -a -z "$BASE" && { echo "Error: no CA exists. Create new CA with init command."; usage; exit 1; }||true
+
+}
 
 parse_opt "$@"
+check_opt
 
 case "$COMMAND" in
 	init)		BASE="$PARAMETER"
