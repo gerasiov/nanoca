@@ -3,7 +3,7 @@ Section: admin
 Priority: optional
 Maintainer: Alexander GQ Gerasiov <gq@cs.msu.su>
 Build-Depends: cdbs, debhelper (>= 5)
-Standards-Version: 3.7.2
+Standards-Version: 3.7.3
 
 Package: nanoca
 Architecture: all
