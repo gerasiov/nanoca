@@ -21,7 +21,11 @@
 
 set -e
 
-# Basic configs
+# Should point to config dir
+CONFIG_DIR="/etc/nanoca"
+
+# Predefined variables
+# feel free to redefine them in your ~/.nanoca config file
 BASE=""
 COUNTRY="RU"
 PROVINCE=""
@@ -36,9 +40,8 @@ CA_KEY="rsa:4096"
 CERT_DAYS=1096
 CERT_KEY="rsa:2048"
 CERT_TYPE="server"
-CONFIG_DIR="/etc/nanoca"
-BATCH=""
-FILTER_TYPE=""
+
+# Dont modify variables under this line
 
 # Read user's config
 if [ -f "${HOME}/.nanoca" ];then
@@ -48,7 +51,8 @@ fi
 export BASE COUNTRY PROVINCE CITY ORGANIZATION UNIT CNAME EMAIL
 
 COMMAND_NAME="nanoca"
-
+BATCH=""
+FILTER_TYPE=""
 CONFIG="${CONFIG_DIR}/openssl.cnf"
 
 # Create certificate request.
