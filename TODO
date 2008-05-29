@@ -7,3 +7,4 @@ CRL support
 --brief
 init shoud generate .nanoca
 dates in list-certs
+bash completions
