@@ -1,0 +1,9 @@
+Here I'll try to keep a list of things, which should/could be included in nanoCA in the future:
+
+export command (difirent formats, PKCS#12)
+CRL support
+--config
+--base
+--brief
+init shoud generate .nanoca
+dates in list-certs
