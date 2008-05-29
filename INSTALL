@@ -1,0 +1,2 @@
+Just drop nanoca script somewhere. Edit it so that CONFIG_DIR points to the
+directory, where you place config files.
