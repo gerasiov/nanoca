@@ -103,7 +103,7 @@ sign_cert(){
 	#  sign the certificate
 	echo "CA signing: $CSR -> $CERT"
 
-	openssl ca -config "$CONFIG" $BATCH -extensions "$CERT_TYPE" -extfile "${CONFIG_DIR}/${CERT_TYPE}.cnf" -out "$CERT" -infiles "$CSR" ||{ echo "Error occured."; exit 1; }
+	openssl ca -config "$CONFIG" $BATCH -days "$CERT_DAYS" -extensions "$CERT_TYPE" -extfile "${CONFIG_DIR}/${CERT_TYPE}.cnf" -out "$CERT" -infiles "$CSR" ||{ echo "Error occured."; exit 1; }
 
 	echo "CA verifying: $CERT <-> CA cert"
 	openssl verify -CAfile "${BASE}/cacert.pem" "$CERT"
