@@ -146,7 +146,7 @@ create_ca(){
 # Print certificate in plain text
 show_cert(){
 	NAME="$1"
-	if [ ! -f "${BASE}/req/${NAME}.pem" ];then
+	if [ ! -f "${BASE}/certs/${NAME}.pem" ];then
 		echo "Aborted: no such certificate."
 		exit 1
 	fi
@@ -156,12 +156,12 @@ show_cert(){
 
 show_req(){
 	NAME="$1"
-	if [ ! -f "${BASE}/req/${NAME}.crl" ];then
+	if [ ! -f "${BASE}/req/${NAME}.csr" ];then
 		echo "Aborted: no such certificate request."
 		exit 1
 	fi
 
-	openssl req -in "${BASE}/req/${NAME}.crl" -text
+	openssl req -in "${BASE}/req/${NAME}.csr" -text
 }
 
 list_certs(){
